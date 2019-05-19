@@ -10,14 +10,14 @@ typedef struct rtime{
 }rtime;
 typedef struct fnode *fptr;
 typedef struct fnode{
-    char permission[9];
-    int id;
-    bool hide;
-    char type;
-    char owner[20];
-    char group[20];
+    int id; // node id(address value) (ex:1382842368)
+    char permission[9]; // permission (ex:rw-rwxrwx)
+    bool hide; // Whether it's a hidden file or not.
+    char type; // 'd' is directory. '-' is file.
+    char owner[20]; // File or directory owner
+    char group[20]; // File or directory ownership group
+    char name[20]; // Dir/file name
     rtime recent_time;
-    char name[20];
     fptr upper,lower,sbling;
 }fnode;
 typedef struct group *gptr;
@@ -73,7 +73,7 @@ int get_childsize(fptr t)
 
 int get_filesize(fptr t)
 {
-    return sizeof(*t)+get_childsize(t->lower);
+    return sizeof(*t)+get_childsize(t->lower); // I've set the file size to the size of the structure. need to review it.
 }
 
 char* get_month(int m)
@@ -304,7 +304,7 @@ fptr make_fd(char type,char *fdname,fptr *upper,int mode)
     strcpy(fd->name,fdname); fd->type=type;
     fd->lower=fd->sbling=NULL; fd->id=fd; fd->hide=false;
     get_permission(&fd,mode);
-    strcpy(fd->owner,"root");
+    strcpy(fd->owner,"root"); // User 기능이 없으므로 일단 root로 소유권 둠.
     strcpy(fd->group,"root");
     fd->recent_time=make_fd_refresh_time();
     if (*upper==NULL){
@@ -498,16 +498,16 @@ void mkdir(fptr *cur, char *argv[])
     //for(i=0;i<pathnum;i++)
       //  printf("path:%s\n",path_list[i]);
     if(m<=-1) mode=755; // default is 755
-    // Node Creation part
+    // Directory Creation part
     if(p==0){
         for(i=0;i<pathnum;i++){
-            if(chkdir(cur,path_list[i],mode)==NULL)
+            if(chkdir(cur,path_list[i],mode)==NULL) // Need the fork() p==0 case
                 return NULL;
         }
     }
     else if(p==1){ // sequence generate part
         for(i=0;i<pathnum;i++){
-            chkdir_p(cur,path_list[i],mode);
+            chkdir_p(cur,path_list[i],mode); // Need the fork() p==1 case
         }
     }
     for(i=0;i<pathnum;i++)
@@ -704,7 +704,7 @@ int main()
     fptr cur=NULL;
     get_fd(&cur,'d',"root",777);
     //printf("load end--------------------------------------------\n");
-    //load_mydir(&cur,"directory.bin");
+    load_mydir(&cur,"directory.bin"); // if you want to load previous directory, use this.
     preorder(root), printf("\n");
     char argv[MAX_ARGV]={'\0'};
     printf("*--Welcome to the DGU OS project system.--*\nIf you want to exit, enter \"exit\".\n");
@@ -721,6 +721,5 @@ int main()
         save_fd("directory.bin");
     }
     freeall(root);
-    //save_fd("directory.bin");
     return 0;
 }
