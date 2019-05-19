@@ -702,7 +702,7 @@ void split_cmd(char argv[],char cmd[],char remain[])
 int main()
 {
     fptr cur=NULL;
-    get_fd(&cur,'d',"root",777);
+    //get_fd(&cur,'d',"root",777); // load_mydir 쓸꺼면 주석처리하고, load 안헐꺼면 이거 활성화
     //printf("load end--------------------------------------------\n");
     load_mydir(&cur,"directory.bin"); // if you want to load previous directory, use this.
     preorder(root), printf("\n");

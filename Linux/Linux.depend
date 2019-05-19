@@ -1,0 +1,8 @@
+# depslib dependency file v1.0
+1558246929 source:c:\users\lg\google 드라이브\github\makelinux\linux\main.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<time.h>
+	<stdbool.h>
+
