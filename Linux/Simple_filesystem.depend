@@ -1,0 +1,15 @@
+# depslib dependency file v1.0
+1558179736 source:c:\users\thop8\google drive\c\simple_filesystem\main.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<time.h>
+	<stdbool.h>
+
+1558182462 source:c:\users\lg\google 드라이브\c\simple_filesystem\main.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<time.h>
+	<stdbool.h>
+

@@ -5,9 +5,7 @@
 #include <stdbool.h>
 #define MAX_ARGV 256
 #define MAX_CMD 64
-typedef struct rtime{
-    int year,month,day,hour,min,sec;
-}rtime;
+
 typedef struct fnode *fptr;
 typedef struct fnode{
     char permission[9];
@@ -16,7 +14,7 @@ typedef struct fnode{
     char type;
     char owner[20];
     char group[20];
-    rtime recent_time;
+    time_t recenttime;
     char name[20];
     fptr upper,lower,sbling;
 }fnode;
@@ -54,33 +52,6 @@ int check_arg(char *argv[], int max);
 void get_permission(fptr *cur,int mode);
 fptr chdir(fptr *curr,char *path[],char mode[]);
 fptr root=NULL;
-
-void rm(fptr *cur,char *argv[])
-{
-
-}
-
-int get_childsize(fptr t)
-{
-    int size=0;
-    if (t!=NULL){
-        size+=sizeof(*t);
-        size+=get_childsize(t->lower);
-        size+=get_childsize(t->sbling);
-    }
-    return size;
-}
-
-int get_filesize(fptr t)
-{
-    return sizeof(*t)+get_childsize(t->lower);
-}
-
-char* get_month(int m)
-{
-    static char monthlist[12][4] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
-    return monthlist[m];
-}
 
 stacktype make_stack()
 {
@@ -135,6 +106,7 @@ int pwd_optchk(char remain[])
     }
     return 1;
 }
+
 
 void pwd(fptr curtemp,char remain[])
 {
@@ -265,12 +237,12 @@ void ls(fptr cur,char *argv[])
         t=t->sbling;
     }
     t=delete_queue(&queue); i=0;
-    char list_string[]="%c%s%4d %5s%5s  %5d %5s %d %d:%d %s\n";
+    char list_string[]="%c%s%4d %5s%5s %s\n";
     while(t!=NULL){
         if(l==1){
-            if(i==0&&t==curtemp) printf(list_string,t->type,t->permission,ls_getlinknum(t),t->owner,t->group,get_filesize(t),get_month(t->recent_time.month),t->recent_time.day,t->recent_time.hour,t->recent_time.min,".");
-            else if(i==1&&t==curtemp->upper) printf(list_string,t->type,t->permission,ls_getlinknum(t),t->owner,t->group,get_filesize(t),get_month(t->recent_time.month),t->recent_time.day,t->recent_time.hour,t->recent_time.min,"..");
-            else printf(list_string,t->type,t->permission,ls_getlinknum(t),t->owner,t->group,get_filesize(t),get_month(t->recent_time.month),t->recent_time.day,t->recent_time.hour,t->recent_time.min,t->name);
+            if(i==0&&t==curtemp) printf(list_string,t->type,t->permission,ls_getlinknum(t),t->owner,t->group,".");
+            else if(i==1&&t==curtemp->upper) printf(list_string,t->type,t->permission,ls_getlinknum(t),t->owner,t->group,"..");
+            else printf(list_string,t->type,t->permission,ls_getlinknum(t),t->owner,t->group,t->name);
         }
         else{
             if(i==0&&t==curtemp) printf(".   ");
@@ -284,20 +256,6 @@ void ls(fptr cur,char *argv[])
     free(path);
 }
 
-rtime make_fd_refresh_time()
-{
-    rtime recent_time;
-    time_t make_time=time(NULL);
-    struct tm *t=localtime(&make_time);
-    recent_time.year=t->tm_year;
-    recent_time.month=t->tm_mon;
-    recent_time.day=t->tm_mday;
-    recent_time.hour=t->tm_hour;
-    recent_time.min=t->tm_min;
-    recent_time.sec=t->tm_sec;
-    return recent_time;
-}
-
 fptr make_fd(char type,char *fdname,fptr *upper,int mode)
 {
     fptr fd=(fptr)malloc(sizeof(fnode));
@@ -306,7 +264,6 @@ fptr make_fd(char type,char *fdname,fptr *upper,int mode)
     get_permission(&fd,mode);
     strcpy(fd->owner,"root");
     strcpy(fd->group,"root");
-    fd->recent_time=make_fd_refresh_time();
     if (*upper==NULL){
         fd->upper=fd;
     }
@@ -641,7 +598,7 @@ int cd(fptr *curr,char *argv[])
     else return 0;
     return 1;
 }
-
+// ls cat rm pwd
 fptr change_directory(fptr *cur,fptr *_cur,char dirname[],char mode[])
 {
     if(!strcmp(dirname,"~")||!strcmp(dirname,"/")) return root; //dirname = "~/test/starcraft
