@@ -22,14 +22,14 @@ typedef struct fnode{
 }fnode;
 typedef struct group *gptr;
 typedef struct group{
+    int gid;
     char name[20];
-    int mode;
 }group;
 typedef struct user *uptr;
 typedef struct user{
-    char name[20];
-    char pswd[20];
-    char group[20];
+    int uid,gid;
+    char name[20],passwd[20],home_path[30];
+    uptr link;
 }user;
 typedef struct qnode *qptr;
 typedef struct qnode{
@@ -53,13 +53,8 @@ fptr change_directory(fptr *cur,fptr *_cur,char dirname[],char mode[]);
 int check_arg(char *argv[], int max);
 void get_permission(fptr *cur,int mode);
 fptr chdir(fptr *curr,char *path[],char mode[]);
-fptr root=NULL;
+fptr root=NULL; uptr user_head=NULL;
 
-/*void rm(fptr *cur,char *argv[])
-{
-
-}
-*/
 int get_childsize(fptr t)
 {
     int size=0;
@@ -121,7 +116,7 @@ qtype make_queue()
     return queue;
 }
 
-int pwd_optchk(char remain[])
+int optchk(char remain[],char funcname[])
 {
     int i=0;
     while(remain[i]!='\0'){
@@ -129,7 +124,7 @@ int pwd_optchk(char remain[])
             while(remain[i]=='-'){
                 i++;
             }
-            printf("bash: pwd: -%c invalid option\n",remain[i]);
+            printf("bash: %s: -%c invalid option\n",funcname,remain[i]);
             return 0;
         } i++;
     }
@@ -138,7 +133,7 @@ int pwd_optchk(char remain[])
 
 void pwd(fptr curtemp,char remain[])
 {
-    if(!pwd_optchk(remain)) return;
+    if(!optchk(remain,"pwd")) return;
     fptr t=curtemp;
     stacktype stack=make_stack();
     if(t->upper==t){
@@ -699,260 +694,96 @@ void split_cmd(char argv[],char cmd[],char remain[])
         argv[i]='\0';
 }
 
-
-
-/*int cat(fptr *cur, char filename[])
+void user_freeall()
 {
-	int state = 1;
-	fptr newptr = NULL;
-	fptr tempptr = NULL;
-
-	rtime rawtime;
-    struct tm * timeinfo;		//	시간 설정을 위해
-
-	char month[10];
-	char year[10];
-
-	newptr = (fptr)malloc( sizeof(fptr) );
-	newptr->lower = NULL;
-	newptr->sbling = NULL;
-
-	time(&rawtime);
-    timeinfo = localtime ( &rawtime ); //현재시간 측정
-
-	if(chkfile(cur, filename)!=NULL && chkfile(cur, filename)->type !='d' )
-	{
-		printf("touch: '%s' 파일을 만들 수 없습니다 : 파일이 존재 합니다. \n",filename);
-		return 0;
-	}
-	if(newptr != NULL)
-	{
-		strncpy(newptr->name,filename,20);
-		strftime (year,10,"%Y",timeinfo);	//  현재 시간 정보를 바탕으로, 년도를 구함
-		strftime (month,10,"%m",timeinfo);	//  현재 시간 정보를 바탕으로, 월을 구함
-		newptr->recent_time->year = atoi(month);
-		newptr->recent_time->month = atoi(year);
-		if(filename[0] =='.')
-			newptr->type ='user';//형이 수정중
-		else
-			newptr->type ='-';
-		if(cur->upper == NULL )  // 초기 헤더노드의 정보를 루트로 연결한다.
-		{
-			cur->upper = newptr;
-			strcpy(newptr->owner,"root");
-			strcpy(newptr->group,"root");
-			newptr->permission[0] = 'r';
-			newptr->permission[1] = 'w';
-			newptr->permission[2] = 'r';
-			newptr->permission[3] = '-';
-			newptr->permission[4] = '-';
-			newptr->permission[5] = '-';
-			newptr->permission[6] = '-';
-			newptr->permission[7] = '-';
-			newptr->permission[8] = '-';
-			newptr->upper = NULL;
-		}
-		else // 루트가 존재할 경우
-		{
-			// ----------------------- 해당 위치에서 대상의 허가권 검사 -----------------------
-			if( state = permissionHandler(cur->permission,'w') == 0 )
-			{
-					printf("touch: '%s' 파일을 만들 수 없습니다.: 허가 거부됨 \n",cur);
-					return 0;
-			}
-			strcpy(newptr->owner,uptr->name);  // 추가하려는 유저명
-			strcpy(newptr->group,gptr->name); // 추가하려는 유저명
-			newptr->permission[0] = 'r';
-			newptr->permission[1] = 'w';
-			newptr->permission[2] = '-';
-			newptr->permission[3] = 'r';
-			newptr->permission[4] = '-';
-			newptr->permission[5] = '-';
-			newptr->permission[6] = 'r';
-			newptr->permission[7] = '-;';
-			newptr->permission[8] = '-';
-			newptr->upper = fptr; // 각 노드의 Parrent 값을 currentNode로 변경함으로써 pwd 를 이용한 스텍저장을 가능하도록 함.
-			// ---------------------------- 일단 디렉토리의 정보를 저장한다. ----------------------------------
-			if(cur->lower == NULL)  // dTree 가 가지고있는 currentNode를 기준으로 하위 파일 및 디렉토리를 추가한다.
-			{
-				cur->lower = newptr;
-			}
-			else											// current_node의 자식이 존재하므로 rsibiling으로 계속 연결 시킨다.
-			{
-				tempptr = cur->lower;				// 현재 위치이다.
-				while (tempptr->sibiling != NULL)				// 검색을 해가면서 RSibiling NULL인 부분을 찾는다.
-				{
-					tempptr = tempptr->sbiling;
-				}
-				tempptr->sbling = newptr;
-			}
-		}
-	}
-	else
-	{
-		printf("[Error] NULL , MakeDirectory() \n");
-		return 0;
-	}
-
-	return 1;
-
+    uptr lead=user_head, prev=lead;
+    while(lead!=NULL){
+        prev=lead;
+        lead=lead->link;
+        free(prev);
+    }
 }
 
-fptr chkfile(fptr* cur, char fileName[]){
-	fptr* returnptr = NULL;
-	returnptr = cur->lower;
-	while(returnptr != NULL)
-	{
-		if(strcmp(returnptr->name,fileName) == 0 )
-		{
-			break;
-		}
-		returnptr = returnptr->sbling;
-	}
-	return returnptr;								// 찾지 못할시 NULL 값을 넘긴다.
+uptr user_reset_userlist()
+{
+    user_head=(uptr)malloc(sizeof(user));
+    user_head->gid=user_head->uid=0;
+    user_head->link=NULL;
+    strcpy(user_head->name,"root");
+    strcpy(user_head->passwd,"sjy");
+    strcpy(user_head->home_path,"/");
+    return user_head;
 }
 
-
-
-/*
-int rm(fptr* cur, char dirname[],int opt){
-	int state = 1;
-	fptr* delNode = NULL;
-	fptr* searchNode = NULL;
-	fptr* prevNode = NULL;
-
-	char yesOrno[10];
-
-	prevNode = searchNode = cur->lower;
-
-
-	if(prevNode == NULL)
-	{
-		printf("[Error] %s 는 존재하지 않습니다.\n",dirname);
-		return 0;
-	}
-	else if(strcmp(searchNode->name, dirname)==0)
-	{
-		cur->lower= searchNode->sbling;
-		delNode = searchNode;
-	}
-	else
-	{
-		searchNode = searchNode->sbling;
-		while( searchNode != NULL )
-		{
-			if( strcmp(searchNode -> name , dirname) ==0 )
-			{
-				delNode = searchNode;
-				break;
-			}
-			else
-			{
-				prevNode = searchNode;
-				searchNode = searchNode -> sbling;
-			}
-		}
-	}
-	if(delNode != NULL)
-	{
-		if( delNode->lower != NULL && opt !=3 )
-		{
-			printf("rmdir: %s 디렉토리가 비어 있지 않음 \n",delNode->name);
-			return 0;
-		}
-		// ----------------------- 해당 위치에서의 허가권 검사 -----------------------
-		if( state = permissionHandler(delNode,'w') == 0 )
-		{
-			printf("rmdir: '%s' 을(를) 삭제 할 수 없습니다.: 허가가 거부됨 \n",dirname);
-			return 0;
-		}
-		// ----------------------- @해당 위치에서의 허가권 검사 ----------------------
-
-		prevNode->sbiling = delNode->sbiling;
-		if(opti== 1)		// 옵션이 1일경우 디렉토리 삭제 ..
-		{
-			FreeSubDirectory(delNode->lower);
-		}
-		free(delNode);
-		return 1;
-	}
-	else
-	{
-		printf("[Error] %s 는 존재하지 않습니다. \n",dirname);
-		return 0;
-	}
-}*/
-
-/*int permissionHandler(fptr* cur, char opt)
+void user_save_userlist(char *save_dir)
 {
-	if( strcmp(cur->name,"root") == 0)	// 최고 계정일 경우 무조건, TRUE
-	{
-		return 1;
-	}
-	else if( strcmp(cur->name,Node->username) == 0) // 현재 로그인한 일반유저와 , 대상의 소유 정보가 같을경우..
-	{
-		if( opt == 'r')
-		{
-			if(cur->permission[0] == 'r')
-				return 1;
-			else
-				return 0;
-		}
-		else if( option == 'w')
-		{
-			if(cur->permission[1] == 'w')
-				return 1;
-			else
-				return 0;
+    FILE *fp;
+    if((fp=fopen(save_dir,"w"))==NULL){
+        printf("File open error!\n"); return;
+    }
+    uptr lead=user_head;
+    while(lead!=NULL){
+        fwrite(lead,sizeof(user),1,fp);
+        lead=lead->link;
+    }
+    fclose(fp);
+}
 
-		}
-		else if( option == 'x')
-		{
-			if(cur->permission[2] == 1)
-				return 1;
-			else
-				return 0;
-		}
-	}
-	else													// 현재 로그인한 유저와 , 대상의 소유 정보가 다를경우..
-	{
-		if( option == 'r')
-		{
-			if(cur->permission[6] == 1)
-				return 1;
-			else
-				return 0;
-		}
-		else if( option == 'w')
-		{
-			if(Node->permission[7] == 1)
-				return 1;
-			else
-				return 0;
+void user_load_userlist(char *load_dir)
+{
+    FILE *fp;
+    if((fp=fopen(load_dir,"r")==NULL)){
+        printf("File open error!\n"); return;
+    }
+    printf("???\n");
+    while(!feof(fp)){
+        printf("before load\n");
+        uptr newp=(uptr)malloc(sizeof(user));
+        fread(newp,sizeof(user),1,fp);
+        newp->link=NULL;
+        printf("????\n");
+        if(user_head==NULL)
+                user_head=newp;
+        else{
+            uptr lead=user_head;
+            while(lead->link!=NULL){
+                lead=lead->link;
+            }
+            lead->link=newp;
+        }
+    }
+    fclose(fp);
+}
 
-		}
-		else if( option == 'x')
-		{
-			if(Node->permission[8] == 1)
-				return 1;
-			else
-				return 0;
-		}
-	}
-	return 0;
-}*/
+int is_root(uptr cur_user)
+{
+    if(cur_user->uid==0) return 1;
+    return 0;
+}
+
+void adduser(uptr cur_user,char remain[])
+{
+    if(!is_root(cur_user)){
+        printf("adduser: Inly root may add a user or group to the system.\n");
+        return;
+    }
+    else if(!optchk(remain,"adduser"))
+        return;
+}
 
 int main()
 {
     fptr cur=NULL;
-    //get_fd(&cur,'d',"root",777); // load_mydir 쓸꺼면 주석처리하고, load 안헐꺼면 이거 활성화
+    //user_reset_userlist();
+    get_fd(&cur,'d',"root",777); // load_mydir 쓸꺼면 주석처리하고, load 안헐꺼면 이거 활성화
     //printf("load end--------------------------------------------\n");
-    load_mydir(&cur,"directory.bin"); // if you want to load previous directory, use this.
+    user_load_userlist("userlist.bin");
+    uptr cur_user=user_head;
+    //load_mydir(&cur,"directory.bin"); // if you want to load previous directory, use this.
     preorder(root), printf("\n");
     char argv[MAX_ARGV]={'\0'};
     printf("*--Welcome to the DGU OS project system.--*\nIf you want to exit, enter \"exit\".\n");
     while(printf("%s:%s$ ",root->name,cur->name)&&gets(argv)!=EOF&&strncmp(argv,"exit",4)){
-        //int cmdlen=0,remainlen=0,i=0;
         if(!strncmp(argv," ",1)||strlen(argv)<=0) continue;
         char cmd[MAX_CMD], remain[MAX_ARGV-MAX_CMD];
         split_cmd(argv,cmd,remain);
@@ -962,7 +793,9 @@ int main()
         else if(!strcmp(cmd,"pwd")) pwd(cur,remain);
         else printf("Command \'%s\' not found.\n",cmd);
         save_fd("directory.bin");
+        user_save_userlist("userlist.bin");
     }
+    user_freeall();
     freeall(root);
     return 0;
 }
