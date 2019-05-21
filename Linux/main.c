@@ -949,6 +949,66 @@ void su(fptr *cur,uptr *cur_user,char username[])
     }
 }
 
+int dec_to_octal(int n)
+{
+    if(n<=7)
+        return n;
+    return dec_to_octal(n/8)*10+n%8;
+}
+
+void permisstion_to_octal(fptr *cur,char mode[])
+{
+    char octal[4];
+    int i=0,j=0,searchset[]={0,3,6},valueset[]={4,2,1};
+    while(i<3){
+    int sum=0;;
+    for(j=searchset[i];j<searchset[i]+3;j++){
+        if((*cur)->permission[j]!='-'){
+            sum+=valueset[j%3];
+        }
+    }
+    octal[i]=sum+48;
+    i++;
+    }
+    octal[i]='\0';
+    get_permission(cur,dec_to_octal(strtoul(octal, NULL, 8)+strtoul(mode, NULL, 8)));
+}
+
+void chmod(fptr *cur,uptr cur_user,char remain[])
+{
+    if(!optchk(remain,"chmod")) return;
+    char *token=strtok(remain," "),*path,mode[4]={'\0'};
+    int i=0;
+    while(token!=NULL){
+        if(i==0){
+            if(isoctal(token)) strcpy(mode,token);
+            else{
+                printf("chmod: invalid mode: \'%s\'\n",token);
+                return;
+            }
+        }
+        else if(i==1){
+            path=(char*)malloc(sizeof(char)*strlen(token));
+            strcpy(path,token);
+            break;
+        }
+        i++;
+        token=strtok(NULL," ");
+    }
+    fptr curtemp=*cur;
+    token=strtok(path,"/");
+    while(token!=NULL){
+        if((curtemp=change_directory(cur,&curtemp,token,"chmod"))==NULL) return;
+        token=strtok(NULL, "/");
+    }
+    if(!check_permission(curtemp,cur_user,'w')){
+        printf("chmod: cannot open directory \'%s\': Permission denied\n",curtemp->name);
+        return;
+    }
+    permisstion_to_octal(&curtemp,mode);
+    curtemp->recent_time=make_fd_refresh_time();
+}
+
 int main()
 {
     fptr cur=NULL;
@@ -972,6 +1032,7 @@ int main()
         else if(!strcmp(cmd,"pwd")) pwd(cur,remain);
         else if(!strcmp(cmd,"adduser")) adduser(cur_user,remain);
         else if(!strcmp(cmd,"su")) su(&cur,&cur_user,remain);
+        else if(!strcmp(cmd,"chmod")) chmod(&cur,cur_user,remain);
         else printf("Command \'%s\' not found.\n",cmd);
         save_fd("directory.bin");
         user_save_userlist("userlist.bin");
