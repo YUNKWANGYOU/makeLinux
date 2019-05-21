@@ -5,6 +5,9 @@
 #include <stdbool.h>
 #define MAX_ARGV 256
 #define MAX_CMD 64
+#define MAX_NAME 24
+#define MAX_PASSWD 24
+#define MAX_PATH 64
 typedef struct rtime{
     int year,month,day,hour,min,sec;
 }rtime;
@@ -14,21 +17,22 @@ typedef struct fnode{
     char permission[9]; // permission (ex:rw-rwxrwx)
     bool hide; // Whether it's a hidden file or not.
     char type; // 'd' is directory. '-' is file.
-    char owner[20]; // File or directory owner
-    char group[20]; // File or directory ownership group
-    char name[20]; // Dir/file name
+    char owner[MAX_NAME]; // File or directory owner
+    char group[MAX_NAME]; // File or directory ownership group
+    char name[MAX_NAME]; // Dir/file name
     rtime recent_time;
     fptr upper,lower,sbling;
 }fnode;
 typedef struct group *gptr;
 typedef struct group{
     int gid;
-    char name[20];
+    char name[MAX_NAME];
 }group;
 typedef struct user *uptr;
 typedef struct user{
     int uid,gid;
-    char name[20],passwd[20],home_path[30];
+    char name[MAX_NAME],passwd[MAX_PASSWD],home_path[MAX_PATH];
+    rtime recent_time;
     uptr link;
 }user;
 typedef struct qnode *qptr;
@@ -54,6 +58,7 @@ int check_arg(char *argv[], int max);
 void get_permission(fptr *cur,int mode);
 fptr chdir(fptr *curr,char *path[],char mode[]);
 fptr root=NULL; uptr user_head=NULL;
+char current_ver[]="0.1 (Test)", os_name[]="DGU-OS";
 
 int get_childsize(fptr t)
 {
@@ -341,7 +346,7 @@ int isoctal(char c[])
 void get_permission(fptr *fd,int mode) // 2 algorithm edit!
 {
     int i=0,j=0,searchset[]={4,2,1},step=0,len=0;
-    char mode_s[4],pset[]={'r','w','x'},temp[4]="000\0";
+    char mode_s[4],pset[]={'r','w','x'},temp[]="000\0";
     itoa(mode,mode_s,10);
     len=strlen(mode_s);
     if(len==1){
@@ -709,8 +714,9 @@ uptr user_reset_userlist()
     user_head=(uptr)malloc(sizeof(user));
     user_head->gid=user_head->uid=0;
     user_head->link=NULL;
+    user_head->recent_time=make_fd_refresh_time();
     strcpy(user_head->name,"root");
-    strcpy(user_head->passwd,"sjy");
+    strcpy(user_head->passwd,"root");
     strcpy(user_head->home_path,"/");
     return user_head;
 }
@@ -723,7 +729,6 @@ void user_save_userlist(char *save_dir)
     }
     uptr lead=user_head;
     while(lead!=NULL){
-        printf("Write user \'%s\'\n",lead->name);
         fwrite(lead,sizeof(user),1,fp);
         lead=lead->link;
     }
@@ -748,7 +753,6 @@ void user_load_userlist(char *load_dir)
     if((fp=fopen(load_dir,"rb"))==NULL){
         printf("File open error!\n"); return;
     }
-    printf("Before load\n");
     while(!feof(fp)){
         uptr newp=(uptr)malloc(sizeof(user));
         fread(newp,sizeof(user),1,fp);
@@ -774,16 +778,19 @@ int is_root(uptr cur_user)
 
 void user_get_password(uptr *newuser)
 {
-    char Retype[20];
+    char Retype[MAX_PASSWD];
     while(1){
         printf("Enter new UNIX password:");
-        scanf("%s",(*newuser)->passwd);
+        gets((*newuser)->passwd);
+        //scanf("%s",(*newuser)->passwd);
         printf("Retype new UNIX password:");
-        scanf("%s",Retype);
+        gets(Retype);
+        //scanf("%s",Retype);
         if(strcmp((*newuser)->passwd,Retype)){
             char yesorno;
             printf("Sorry, passwords do not match\n Try again? [y/n]\n");
-            scanf("%c",&yesorno);
+            scanf("%c",yesorno);
+            //scanf("%c",&yesorno);
             if(yesorno=='y') continue;
             else return;
         }
@@ -810,7 +817,6 @@ uptr user_get_new_user(char username[])
     newuser->link=NULL;
     strcpy(newuser->name,username);
     uptr prev=user_head, lead=user_head;
-    printf("While\n");
     while(lead->link!=NULL){
         prev=lead;
         lead=lead->link;
@@ -820,11 +826,13 @@ uptr user_get_new_user(char username[])
     printf("Adding new group \'%s\' (%d) ...\n",newuser->name,newuser->gid);
     printf("Adding new group \'%s\' (%d) with group \'%s\' ...\n",newuser->name,newuser->gid,username);
     lead->link=newuser;
-    char home_dir[30];
+    char home_dir[MAX_PATH];
     get_homedir(home_dir,username);
     mkdir(&root,home_dir);
     printf("Creating home directory \'%s\' ...\n",home_dir);
+    strcpy(newuser->home_path,home_dir);
     user_get_password(&newuser);
+    newuser->recent_time=make_fd_refresh_time();
 }
 
 void adduser(uptr cur_user,char remain[])
@@ -838,30 +846,53 @@ void adduser(uptr cur_user,char remain[])
     uptr newuser=user_get_new_user(remain);
 }
 
-uptr set_root()
+uptr welcome_compareID(char *account,char *passwd)
 {
-    user_head->gid=user_head->uid=0;
-    strcpy(user_head->home_path,"/");
-    strcpy(user_head->passwd,"root");
-    user_head->link=NULL;
-    return user_head;
+    int fail=0;
+    uptr lead=user_head;
+    while(lead!=NULL&&strcmp(lead->name,account)){
+        lead=lead->link;
+    }
+    if(lead==NULL) return NULL;
+    else if(strcmp(lead->passwd,passwd)) return NULL;
+    else return lead;
+}
+
+uptr welcome_linux(fptr *cur)
+{
+    printf("%s release %s\n",os_name,current_ver);
+    char account[MAX_NAME],passwd[MAX_PASSWD];
+    uptr login_user=NULL;
+    while(1){
+        printf("localhost login: ");
+        gets(account);
+        printf("Password : ");
+        gets(passwd);
+        if((login_user=welcome_compareID(account,passwd))!=NULL) break;
+        else printf("Login incorrect\n\n");
+    } // month day year
+    printf("Login Success\n User->home_path:%s\n",login_user->home_path);
+    printf("Last login: %s %d %d %d:%d:%d\n",get_month(login_user->recent_time.month),login_user->recent_time.day,login_user->recent_time.year+1900,login_user->recent_time.hour,login_user->recent_time.min,login_user->recent_time.sec);
+    login_user->recent_time=make_fd_refresh_time();
+    cd(cur,login_user->home_path);
+    return login_user;
 }
 
 int main()
 {
     fptr cur=NULL;
-    get_fd(&cur,'d',"root",777); // load_mydir ¾µ²¨¸é ÁÖ¼®Ã³¸®ÇÏ°í, load ¾ÈÇæ²¨¸é ÀÌ°Å È°¼ºÈ­
-    get_fd(&cur,'d',"home",755);
-    //printf("load end--------------------------------------------\n");
+    //get_fd(&cur,'d',"root",777); // load_mydir ¾µ²¨¸é ÁÖ¼®Ã³¸®ÇÏ°í, load ¾ÈÇæ²¨¸é ÀÌ°Å È°¼ºÈ­
+    //get_fd(&cur,'d',"home",755);
+    load_mydir(&cur,"directory.bin"); // if you want to load previous directory, use this.
+    //uptr cur_user=user_reset_userlist();
+    //cur_user=welcome_linux(&cur);
     user_load_userlist("userlist.bin");
-    //uptr cur_user=set_root();
-    uptr cur_user=set_root();
-    //load_mydir(&cur,"directory.bin"); // if you want to load previous directory, use this.
+    uptr cur_user=welcome_linux(&cur);
     preorder(root), printf("\n");
     char argv[MAX_ARGV]={'\0'};
-    printf("*--Welcome to the DGU OS project system.--*\nIf you want to exit, enter \"exit\".\n");
+    printf("*------------Welcome to the DGU OS project system------------*\n[Notice]If you want to exit, enter \"exit\".\n");
     while(printf("%s:%s$ ",cur_user->name,cur->name)&&gets(argv)!=EOF&&strncmp(argv,"exit",4)){
-        //if(!strncmp(argv," ",1)||strlen(argv)<=0) continue;
+        if(!strncmp(argv," ",1)||strlen(argv)<=0) continue;
         char cmd[MAX_CMD], remain[MAX_ARGV-MAX_CMD];
         split_cmd(argv,cmd,remain);
         if(!strcmp(cmd,"cd")) cd(&cur,&remain);
@@ -871,7 +902,8 @@ int main()
         else if(!strcmp(cmd,"adduser")) adduser(cur_user,remain);
         else printf("Command \'%s\' not found.\n",cmd);
         save_fd("directory.bin");
-        //user_save_userlist("userlist.bin");
+        user_save_userlist("userlist.bin");
+        cur_user->recent_time=make_fd_refresh_time();
     }
     save_fd("directory.bin");
     user_save_userlist("userlist.bin");
