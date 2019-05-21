@@ -60,6 +60,7 @@ fptr chdir(fptr *curr,char *path[],char mode[]);
 fptr root=NULL; uptr user_head=NULL;
 char current_ver[]="0.1 (Test)", os_name[]="DGU-OS";
 
+
 int check_permission(fptr cur,uptr cur_user,char access_permission)
 {
     if(cur_user->uid==0&&cur_user->gid==0) return 1;
@@ -929,6 +930,25 @@ uptr welcome_linux(fptr *cur)
     return login_user;
 }
 
+void su(fptr *cur,uptr *cur_user,char username[])
+{
+    if(!optchk(username,"su")) return;
+    uptr lead=user_head;
+    while(lead!=NULL&&strcmp(lead->name,username)){
+        lead=lead->link;
+    }
+    if(lead==NULL) printf("No passwd entry for user \'%s\'\n",username);
+    else{
+        char passwd[MAX_PASSWD];
+        printf("Password: "); gets(passwd);
+        if(strcmp(lead->passwd,passwd)) printf("su: Authentication failure\n");
+        else{
+            *cur_user=lead;
+            (*cur_user)->recent_time=make_fd_refresh_time();
+        }
+    }
+}
+
 int main()
 {
     fptr cur=NULL;
@@ -951,6 +971,7 @@ int main()
         else if(!strcmp(cmd,"ls")) ls(cur,cur_user,&remain);
         else if(!strcmp(cmd,"pwd")) pwd(cur,remain);
         else if(!strcmp(cmd,"adduser")) adduser(cur_user,remain);
+        else if(!strcmp(cmd,"su")) su(&cur,&cur_user,remain);
         else printf("Command \'%s\' not found.\n",cmd);
         save_fd("directory.bin");
         user_save_userlist("userlist.bin");
