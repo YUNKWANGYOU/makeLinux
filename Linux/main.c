@@ -7,7 +7,7 @@
 #define MAX_CMD 64
 #define MAX_NAME 24
 #define MAX_PASSWD 24
-#define MAX_PATH 64
+#define MAX_DIR 64
 typedef struct rtime{
     int year,month,day,hour,min,sec;
 }rtime;
@@ -31,7 +31,7 @@ typedef struct group{
 typedef struct user *uptr;
 typedef struct user{
     int uid,gid;
-    char name[MAX_NAME],passwd[MAX_PASSWD],home_path[MAX_PATH];
+    char name[MAX_NAME],passwd[MAX_PASSWD],home_path[MAX_DIR];
     rtime recent_time;
     uptr link;
 }user;
@@ -51,14 +51,50 @@ typedef struct snode{
 typedef struct stack{
     sptr top;
 }stacktype;
-fptr make_fd(char type,char *fdname,fptr *upper,int mode);
-fptr get_fd(fptr *mydir, char type, char *newname, int modep);
+fptr make_fd(char type,char *fdname,uptr cur_user,fptr *upper,int mode);
+fptr get_fd(fptr *mydir, uptr cur_user, char type, char *newname, int mode);
 fptr change_directory(fptr *cur,fptr *_cur,char dirname[],char mode[]);
 int check_arg(char *argv[], int max);
 void get_permission(fptr *cur,int mode);
 fptr chdir(fptr *curr,char *path[],char mode[]);
 fptr root=NULL; uptr user_head=NULL;
 char current_ver[]="0.1 (Test)", os_name[]="DGU-OS";
+
+int check_permission(fptr cur,uptr cur_user,char access_permission)
+{
+    if(cur_user->uid==0&&cur_user->gid==0) return 1;
+    if(access_permission=='r'){ // 접근하려는 권한이 읽기 권한인 경우(ex:cat(read only), vi(read only)...)
+        if(!strcmp(cur->owner,cur_user->name)){ // 대상이 유저 소유라면 rwxrwxrwx 중 제일 앞의 3자리를 본다.
+            if(cur->permission[0]=='r') return 1;
+            else return 0;
+        }
+        else{ // 유저 소유의 폴더가 아니므로 rwxrwxrwx 중 맨 뒤 3자리를 본다.
+            if(cur->permission[6]=='r') return 1;
+            else return 0;
+        }
+    }
+    else if(access_permission=='w'){ // 접근하려는 권한이 쓰기 권한인 경우(ex:mkdir, cat(read and write), chmod ...)
+        if(!strcmp(cur->owner,cur_user->name)){ // 대상이 유저 소유라면 rwxrwxrwx 중 제일 앞의 3자리를 본다.
+            if(cur->permission[1]=='w') return 1;
+            else return 0;
+        }
+        else{ // 유저 소유의 폴더가 아니므로 rwxrwxrwx 중 맨 뒤 3자리를 본다.
+            if(cur->permission[7]=='w') return 1;
+            else return 0;
+        }
+    }
+    else if(access_permission=='x'){ // 접근하려는 권한이 접근 권한인 경우(ex:ls, cd)
+        if(!strcmp(cur->owner,cur_user->name)){ // 대상이 유저 소유라면 rwxrwxrwx 중 제일 앞의 3자리를 본다.
+            if(cur->permission[3]=='x') return 1;
+            else return 0;
+        }
+        else{ // 유저 소유의 폴더가 아니므로 rwxrwxrwx 중 맨 뒤 3자리를 본다.
+            if(cur->permission[8]=='x') return 1;
+            else return 0;
+        }
+    }
+    else return 0;
+}
 
 int get_childsize(fptr t)
 {
@@ -216,7 +252,7 @@ int ls_getlinknum(fptr cur)
     return num;
 }
 
-void ls(fptr cur,char *argv[])
+void ls(fptr cur,uptr cur_user,char argv[])
 {
     char *path=NULL;
     int a=0, l=0, i;
@@ -251,6 +287,9 @@ void ls(fptr cur,char *argv[])
     }
     qtype queue=make_queue();
     fptr curtemp=ls_getcur(cur,path);
+    if(!check_permission(curtemp,cur_user,'x')){
+        printf("ls: cannot open directory \'%s\': Permission denied\n",curtemp->name);
+    }
     fptr t=curtemp->lower;
     if(a==1){
         insert_queue(&queue,curtemp);
@@ -298,14 +337,14 @@ rtime make_fd_refresh_time()
     return recent_time;
 }
 
-fptr make_fd(char type,char *fdname,fptr *upper,int mode)
+fptr make_fd(char type,char *fdname,uptr cur_user,fptr *upper,int mode)
 {
     fptr fd=(fptr)malloc(sizeof(fnode));
     strcpy(fd->name,fdname); fd->type=type;
     fd->lower=fd->sbling=NULL; fd->id=fd; fd->hide=false;
     get_permission(&fd,mode);
-    strcpy(fd->owner,"root"); // User 기능이 없으므로 일단 root로 소유권 둠.
-    strcpy(fd->group,"root");
+    strcpy(fd->owner,cur_user->name); // User 기능이 없으므로 일단 root로 소유권 둠.
+    strcpy(fd->group,cur_user->name);
     fd->recent_time=make_fd_refresh_time();
     if (*upper==NULL){
         fd->upper=fd;
@@ -394,7 +433,7 @@ fptr fwddir(fptr *cur,fptr *curtemp,char upper_dir[],char lower_dir[])
     }
 }
 
-fptr chkdir(fptr *cur,char path[],int mode)
+fptr chkdir(fptr *cur,uptr cur_user,char path[],int mode)
 {
     fptr curtemp=*cur;
     char *token, *next_token;
@@ -413,41 +452,49 @@ fptr chkdir(fptr *cur,char path[],int mode)
         token=next_token;
         next_token=strtok(NULL,"/");
     }
-    if(next_token==NULL) get_fd(&curtemp,'d',token,mode); // token=='TT', curtemp=test2
-    else get_fd(&curtemp,'d',next_token,mode);
+    if(!check_permission(curtemp,cur_user,'w')){
+        printf("ls: cannot open directory \'%s\': Permission denied\n",(*cur)->name);
+        return NULL;
+    }
+    if(next_token==NULL) get_fd(&curtemp,cur_user,'d',token,mode); // token=='TT', curtemp=test2
+    else get_fd(&curtemp,cur_user,'d',next_token,mode);
     return curtemp;
 }
 
-fptr fwddir_p(fptr *cur,fptr *curtemp,char dirn[],int mode)
+fptr fwddir_p(fptr *cur,uptr cur_user,fptr *curtemp,char dirn[],int mode)
 {
     if(!strncmp(dirn,"~",1)) return root;
     else if(!strncmp(dirn,".",1)) return *cur;
+    if(!check_permission(*cur,cur_user,'w')||!check_permission(*cur,cur_user,'x')){
+        printf("mkdir: cannot open directory \'%s\': Permission denied\n",(*cur)->name);
+        return NULL;
+    }
     if((*curtemp)->lower==NULL){
-        return get_fd(curtemp,'d',dirn,mode);
+        return get_fd(curtemp,cur_user,'d',dirn,mode);
     }
     fptr t=(*curtemp)->lower;
     while(t!=NULL&&strcmp(t->name,dirn)){
         t=t->sbling;
     }
     if(t==NULL){
-        return get_fd(curtemp,'d',dirn,mode);
+        return get_fd(curtemp,cur_user,'d',dirn,mode);
     }
     else return t;
 }
 
-void chkdir_p(fptr *cur,char path[],int mode)
+void chkdir_p(fptr *cur,uptr cur_user,char path[],int mode)
 {
     fptr curtemp=*cur;
     char *token;
     if(!strncmp(path,"/",1)) curtemp=root;
     token=strtok(path,"/");
     while(token!=NULL){
-        curtemp=fwddir_p(cur,&curtemp,token,mode);
+        curtemp=fwddir_p(cur,cur_user,&curtemp,token,mode);
         token=strtok(NULL,"/");
     }
 }
 
-void mkdir(fptr *cur, char *argv[])
+void mkdir(fptr *cur,uptr cur_user,char *argv[])
 {
     int pathnum=0, p=0, m=-1, i, mode=-1;
     char **path_list;
@@ -501,13 +548,13 @@ void mkdir(fptr *cur, char *argv[])
     // Directory Creation part
     if(p==0){
         for(i=0;i<pathnum;i++){
-            if(chkdir(cur,path_list[i],mode)==NULL) // Need the fork() p==0 case
+            if(chkdir(cur,cur_user,path_list[i],mode)==NULL) // Need the fork() p==0 case
                 return NULL;
         }
     }
     else if(p==1){ // sequence generate part
         for(i=0;i<pathnum;i++){
-            chkdir_p(cur,path_list[i],mode); // Need the fork() p==1 case
+            chkdir_p(cur,cur_user,path_list[i],mode); // Need the fork() p==1 case
         }
     }
     for(i=0;i<pathnum;i++)
@@ -515,15 +562,15 @@ void mkdir(fptr *cur, char *argv[])
     free(path_list);
 }
 
-fptr get_fd(fptr *mydir, char type, char *newname, int mode)
+fptr get_fd(fptr *mydir, uptr cur_user, char type, char *newname, int mode)
 {
     if (*mydir==NULL){
-        *mydir=make_fd('d',"root",mydir,mode);
+        *mydir=make_fd('d',"root",cur_user,mydir,mode);
         root=*mydir;
         return *mydir;
     }
     else{
-        fptr temp, fd=make_fd(type,newname,mydir,mode);
+        fptr temp, fd=make_fd(type,newname,cur_user,mydir,mode);
         if((*mydir)->lower==NULL)
             return (*mydir)->lower=fd;
         temp=(*mydir)->lower;
@@ -628,7 +675,7 @@ int check_arg(char *argv[], int max)
     return 0;
 }
 
-int cd(fptr *curr,char *argv[])
+int cd(fptr *curr,uptr cur_user,char *argv[])
 {
     if(check_arg(argv,1)){
         printf("bash: cd: too many arguments\n");
@@ -636,6 +683,10 @@ int cd(fptr *curr,char *argv[])
     }
     fptr curtemp;
     if ((curtemp=chdir(curr,argv,"cd"))!=NULL){
+        if(!check_permission(curtemp,cur_user,'x')){
+            printf("cd: cannot open directory \'%s\': Permission denied\n",curtemp->name);
+            return 0;
+        }
         *curr=curtemp;
     }
     else return 0;
@@ -810,7 +861,7 @@ void get_homedir(char dir[],char username[])
     dir[dirlen]='\0';
 }
 
-uptr user_get_new_user(char username[])
+uptr user_get_new_user(uptr cur_user,char username[])
 {
     printf("Adding user \'%s\' ...\n",username);
     uptr newuser=(uptr)malloc(sizeof(user));
@@ -826,9 +877,9 @@ uptr user_get_new_user(char username[])
     printf("Adding new group \'%s\' (%d) ...\n",newuser->name,newuser->gid);
     printf("Adding new group \'%s\' (%d) with group \'%s\' ...\n",newuser->name,newuser->gid,username);
     lead->link=newuser;
-    char home_dir[MAX_PATH];
+    char home_dir[MAX_DIR];
     get_homedir(home_dir,username);
-    mkdir(&root,home_dir);
+    mkdir(&root,cur_user,home_dir);
     printf("Creating home directory \'%s\' ...\n",home_dir);
     strcpy(newuser->home_path,home_dir);
     user_get_password(&newuser);
@@ -843,7 +894,7 @@ void adduser(uptr cur_user,char remain[])
     }
     else if(!optchk(remain,"adduser"))
         return;
-    uptr newuser=user_get_new_user(remain);
+    uptr newuser=user_get_new_user(cur_user,remain);
 }
 
 uptr welcome_compareID(char *account,char *passwd)
@@ -874,7 +925,7 @@ uptr welcome_linux(fptr *cur)
     printf("Login Success\n User->home_path:%s\n",login_user->home_path);
     printf("Last login: %s %d %d %d:%d:%d\n",get_month(login_user->recent_time.month),login_user->recent_time.day,login_user->recent_time.year+1900,login_user->recent_time.hour,login_user->recent_time.min,login_user->recent_time.sec);
     login_user->recent_time=make_fd_refresh_time();
-    cd(cur,login_user->home_path);
+    cd(cur,login_user,login_user->home_path);
     return login_user;
 }
 
@@ -895,9 +946,9 @@ int main()
         if(!strncmp(argv," ",1)||strlen(argv)<=0) continue;
         char cmd[MAX_CMD], remain[MAX_ARGV-MAX_CMD];
         split_cmd(argv,cmd,remain);
-        if(!strcmp(cmd,"cd")) cd(&cur,&remain);
-        else if(!strcmp(cmd,"mkdir")) mkdir(&cur,&remain);
-        else if(!strcmp(cmd,"ls")) ls(cur,&remain);
+        if(!strcmp(cmd,"cd")) cd(&cur,cur_user,&remain);
+        else if(!strcmp(cmd,"mkdir")) mkdir(&cur,cur_user,&remain);
+        else if(!strcmp(cmd,"ls")) ls(cur,cur_user,&remain);
         else if(!strcmp(cmd,"pwd")) pwd(cur,remain);
         else if(!strcmp(cmd,"adduser")) adduser(cur_user,remain);
         else printf("Command \'%s\' not found.\n",cmd);
