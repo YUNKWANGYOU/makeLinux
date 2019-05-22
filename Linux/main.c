@@ -1054,7 +1054,7 @@ int rm(fptr *cur,uptr *cur_user,char* remain)
 		}
 
 		// ----------------------- 해당 위치에서의 허가권 검사 -----------------------
-		if( state = check_permission(delNode,cur_user,'w') == 0 )
+		if( (state = check_permission(delNode,cur_user,'w')) == 0 )
 		{
 			printf("rmdir: '%s' 을(를) 삭제 할 수 없습니다.: 허가가 거부됨 \n",remain);
 			return 0;
