@@ -1009,6 +1009,73 @@ void chmod(fptr *cur,uptr cur_user,char remain[])
     curtemp->recent_time=make_fd_refresh_time();
 }
 
+int rm(fptr *cur,uptr *cur_user,char* remain)
+{
+	int state = 1;
+	int option = 1;
+	fptr delNode = NULL;
+	fptr searchNode = NULL;
+	fptr prevNode = NULL;
+	prevNode = searchNode = (*cur)->lower;
+
+	if(prevNode == NULL)
+	{
+		printf("[Error] %s 는 존재하지 않습니다.\n",remain);
+		return 0;
+	}
+	else if(strcmp(searchNode->name, remain)==0)
+	{
+		(*cur)->lower= searchNode->sbling;
+		delNode = searchNode;
+	}
+	else
+	{
+		searchNode = searchNode->sbling;
+		while( searchNode != NULL )
+		{
+			if( strcmp(searchNode -> name , remain) ==0 )
+			{
+				delNode = searchNode;
+				break;
+			}
+			else
+			{
+				prevNode = searchNode;
+				searchNode = searchNode -> sbling;
+			}
+		}
+	}
+	if(delNode != NULL)
+	{
+		if( delNode->lower != NULL )
+		{
+			printf("rmdir: %s 디렉토리가 비어 있지 않음 \n",delNode->name);
+			return 0;
+		}
+
+		// ----------------------- 해당 위치에서의 허가권 검사 -----------------------
+		if( state = check_permission(delNode,cur_user,'w') == 0 )
+		{
+			printf("rmdir: '%s' 을(를) 삭제 할 수 없습니다.: 허가가 거부됨 \n",remain);
+			return 0;
+		}
+		// ----------------------- @해당 위치에서의 허가권 검사 ----------------------
+
+		prevNode->sbling = delNode->sbling;
+		if(option == 1)		// 옵션이 1일경우 디렉토리 삭제 ..
+		{
+			freeall(delNode->lower);
+		}
+		free(delNode);
+		return 1;
+	}
+	else
+	{
+		printf("[Error] %s 는 존재하지 않습니다. \n",remain);
+		return 0;
+	}
+}
+
 int main()
 {
     fptr cur=NULL;
@@ -1033,6 +1100,7 @@ int main()
         else if(!strcmp(cmd,"adduser")) adduser(cur_user,remain);
         else if(!strcmp(cmd,"su")) su(&cur,&cur_user,remain);
         else if(!strcmp(cmd,"chmod")) chmod(&cur,cur_user,remain);
+        else if(!strcmp(cmd,"rm")) rm(&cur,cur_user,remain);
         else printf("Command \'%s\' not found.\n",cmd);
         save_fd("directory.bin");
         user_save_userlist("userlist.bin");
