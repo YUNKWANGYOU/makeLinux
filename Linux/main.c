@@ -51,6 +51,7 @@ typedef struct snode{
 }snode;
 typedef struct stack{
     sptr top;
+    int num;
 }stacktype;
 fptr make_fd(char type,char *fdname,uptr cur_user,fptr *upper,int mode);
 fptr get_fd(fptr *mydir, uptr cur_user, char type, char *newname, int mode);
@@ -124,6 +125,7 @@ stacktype make_stack()
 {
     stacktype stack;
     stack.top=NULL;
+    stack.num=0;
     return stack;
 }
 
@@ -133,6 +135,7 @@ void push(stacktype *stack,fptr item)
     newp->data=item; newp->link=NULL;
     newp->link=(*stack).top;
     (*stack).top=newp;
+    (*stack).num++;
 }
 
 fptr pop(stacktype *stack)
@@ -141,6 +144,7 @@ fptr pop(stacktype *stack)
     sptr delete_node=(*stack).top;
     fptr return_val=delete_node->data;
     (*stack).top=(*stack).top->link;
+    (*stack).num--;
     free(delete_node);
     return return_val;
 }
@@ -174,25 +178,34 @@ int optchk(char remain[],char funcname[])
     return 1;
 }
 
-void pwd(fptr curtemp,char remain[])
+int pwd(fptr curtemp,uptr cur_user,char remain[],bool nextline)
 {
-    if(!optchk(remain,"pwd")) return;
+    if(remain!=NULL&&!optchk(remain,"pwd")) return 0;
     fptr t=curtemp;
     stacktype stack=make_stack();
     if(t->upper==t){
-        printf("/\n"); return;
+        printf("/");
+        if(nextline==true) printf("\n");
+        return 1;
     }
     while(t!=root){
         push(&stack,t);
         t=t->upper;
-    }
+
+    } // 1.root가 아니고 user인 경우 2.stack.top->link->name==home && stack.link->link->name==user_name인 경우? ~로 대체 가능
     push(&stack,t); // It's means push(root)
     while((t=pop(&stack))!=NULL){
-        if(t==root) printf("/");
+        if(stack.num>=1&&!strcmp(t->name,"home")&&!strcmp(stack.top->data->name,cur_user->name)){
+            pop(&stack);
+            printf("~");
+        } // home/sjy인 경우
+        else if(t==root) printf("/");
         else if(t==curtemp) printf("%s",t->name);
         else printf("%s/",t->name);
     }
-    printf("\n");
+    if(nextline==true)
+        printf("\n");
+    return 1;
 }
 
 void insert_queue(qtype *queue,fptr item)
@@ -649,10 +662,7 @@ fptr chdir(fptr *curr,uptr cur_user,char *path[],char mode[])
 {
     fptr curtemp=*curr;
     char *s=(char*)malloc(strlen(path));strcpy(s,path);
-    if(!strncmp(path,"/",1)){
-        if((curtemp=change_directory(curr,&curtemp,cur_user,"/",mode))==NULL)
-            return NULL;
-    }
+    if(!strncmp(path,"/",1)) curtemp=root;
     char *dir=strtok(s,"/");
     while(dir!=NULL)
     {
@@ -706,12 +716,14 @@ fptr change_directory(fptr *cur,fptr *_cur,uptr cur_user,char dirname[],char mod
         t=t->sbling;
     }
     if(t==NULL){
+        if(mode==NULL) return NULL;
         printf("bash: %s: %s: No such file or directory\n",mode,dirname);
         return NULL;
     } // t!=NULL
     else{
         if(t->type=='d') *_cur=t;
         else{
+            if(mode==NULL) return NULL;
             printf("bash: %s: %s: Not a directory\n",mode,dirname);
             return NULL;
         }
@@ -813,7 +825,7 @@ void user_load_userlist(char *load_dir)
         uptr newp=(uptr)malloc(sizeof(user));
         fread(newp,sizeof(user),1,fp);
         newp->link=NULL;
-        cd(&curtemp,newp,newp->home_path);
+        chdir(&curtemp,newp,newp->home_path,NULL);
         newp->user_root=curtemp;
         if(user_head==NULL) user_head=newp;
         else{
@@ -887,7 +899,7 @@ uptr user_get_new_user(uptr cur_user,char username[])
     fptr curtemp=root;
     char home_dir[MAX_DIR];
     get_homedir(home_dir,username);
-    mkdir(&root,cur_user,home_dir);
+    mkdir(&root,newuser,home_dir);
     printf("Creating home directory \'%s\' ...\n",home_dir);
     strcpy(newuser->home_path,home_dir);
     cd(&curtemp,newuser,newuser->home_path); // get home_path pointer address at curtemp
@@ -1088,24 +1100,24 @@ int rm(fptr *cur,uptr *cur_user,char* remain)
 int main()
 {
     fptr cur=NULL;
-    //get_fd(&cur,'d',"root",777); // load_mydir 쓸꺼면 주석처리하고, load 안헐꺼면 이거 활성화
-    //get_fd(&cur,'d',"home",755);
-    load_mydir(&cur,"directory.bin"); // if you want to load previous directory, use this.
-    //uptr cur_user=user_reset_userlist();
-    //cur_user=welcome_linux(&cur);
-    user_load_userlist("userlist.bin");
-    uptr cur_user=welcome_linux(&cur);
+    //load_mydir(&cur,"directory.bin"); // if you want to load previous directory, use this.
+    uptr cur_user=user_reset_userlist();
+    cur_user=welcome_linux(&cur);
+    get_fd(&cur,cur_user,'d',"root",777); // load_mydir 쓸꺼면 주석처리하고, load 안헐꺼면 이거 활성화
+    get_fd(&cur,cur_user,'d',"home",733);
+    //user_load_userlist("userlist.bin");
+    //uptr cur_user=welcome_linux(&cur);
     preorder(root), printf("\n");
     char argv[MAX_ARGV]={'\0'};
     printf("*------------Welcome to the DGU OS project system------------*\n[Notice]If you want to exit, enter \"exit\".\n");
-    while(printf("%s:%s$ ",cur_user->name,cur->name)&&gets(argv)!=EOF&&strncmp(argv,"exit",4)){
+    while(printf("%s@DguOS:",cur_user->name)&&pwd(cur,cur_user,NULL,false)&&printf("$ ")&&gets(argv)!=EOF&&strncmp(argv,"exit",4)){
         if(!strncmp(argv," ",1)||strlen(argv)<=0) continue;
         char cmd[MAX_CMD], remain[MAX_ARGV-MAX_CMD];
         split_cmd(argv,cmd,remain);
         if(!strcmp(cmd,"cd")) cd(&cur,cur_user,&remain);
         else if(!strcmp(cmd,"mkdir")) mkdir(&cur,cur_user,&remain);
         else if(!strcmp(cmd,"ls")) ls(cur,cur_user,&remain);
-        else if(!strcmp(cmd,"pwd")) pwd(cur,remain);
+        else if(!strcmp(cmd,"pwd")) pwd(cur,NULL,remain,true);
         else if(!strcmp(cmd,"adduser")) adduser(cur_user,remain);
         else if(!strcmp(cmd,"su")) su(&cur,&cur_user,remain);
         else if(!strcmp(cmd,"chmod")) chmod(&cur,cur_user,remain);
