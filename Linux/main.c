@@ -498,11 +498,25 @@ fptr fwddir_p(fptr *cur,uptr cur_user,fptr *curtemp,char dirn[],int mode)
 void chkdir_p(fptr *cur,uptr cur_user,char path[],int mode)
 {
     fptr curtemp=*cur;
-    char *token;
     if(!strncmp(path,"/",1)) curtemp=root;
-    token=strtok(path,"/");
+    char *token=strtok(path,"/");;
     while(token!=NULL){
         curtemp=fwddir_p(cur,cur_user,&curtemp,token,mode);
+        token=strtok(NULL,"/");
+    }
+}
+
+void mkdir_p(fptr *cur,uptr cur_user,char path[],int mode)
+{
+    fptr curtemp=*cur;
+    if(!strncmp(path,"/",1)) curtemp=root;
+    char *token=strtok(path,"/");;
+    while(token!=NULL){
+        printf("[%s] -> ",token);
+        if((curtemp=change_directory(*cur,curtemp,cur_user,token,NULL))==NULL)
+        {
+            get_fd(&curtemp,cur_user,'d',token,mode);
+        }
         token=strtok(NULL,"/");
     }
 }
@@ -567,7 +581,8 @@ void mkdir(fptr *cur,uptr cur_user,char *argv[])
     }
     else if(p==1){ // sequence generate part
         for(i=0;i<pathnum;i++){
-            chkdir_p(cur,cur_user,path_list[i],mode); // Need the fork() p==1 case
+            //chkdir_p(cur,cur_user,path_list[i],mode); // Need the fork() p==1 case
+            mkdir_p(cur,cur_user,path_list[i],mode);
         }
     }
     for(i=0;i<pathnum;i++)
