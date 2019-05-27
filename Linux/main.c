@@ -8,6 +8,7 @@
 #define MAX_NAME 24
 #define MAX_PASSWD 24
 #define MAX_DIR 64
+#define MAX_CONTENTS 256
 typedef struct rtime{
     int year,month,day,hour,min,sec;
 }rtime;
@@ -22,6 +23,7 @@ typedef struct fnode{
     char name[MAX_NAME]; // Dir/file name
     rtime recent_time;
     fptr upper,lower,sbling;
+    char contents[MAX_CONTENTS];
 }fnode;
 typedef struct group *gptr;
 typedef struct group{
@@ -44,6 +46,7 @@ typedef struct qnode{
 typedef struct qtype{
     qptr front, rear;
 }qtype;
+
 typedef struct snode *sptr;
 typedef struct snode{
     fptr data;
@@ -1097,6 +1100,121 @@ int rm(fptr *cur,uptr *cur_user,char* remain)
 	}
 }
 
+void cat(fptr *cur, uptr *cur_user, char* remain)
+{
+    int i=0;
+    char *token = strtok(remain, " ");
+    char *filename;
+
+    while(token)
+    {
+        if((strcmp(token,"<") == 0))
+        {
+            token = strtok(NULL, " ");
+            i = search_file(cur,token);
+            if(i == 1)
+            {
+                printf("이미 있는 파일");
+                break;
+            }
+            else
+            {
+                make_file(cur ,token);
+                break;
+            }
+        }
+        else
+        {
+            print_file(cur,token);
+            break;
+        }
+    }
+
+}
+int search_file(fptr *cur,char *token)
+{
+    fptr temp = (*cur)->lower;
+    while(temp->sbling != NULL)
+    {
+        if(strcmp(temp->name,token) == 0)
+        {
+            return 1;
+            break;
+        }
+        printf("%s\n",temp->name);
+        printf("%s\n",token);
+
+        temp = temp->sbling;
+    }
+    return 0;
+}
+
+
+int print_file(fptr *cur, char *token)
+{
+    fptr temp = NULL;
+    if((*cur)->lower == NULL)
+    {
+        printf("file does not exist");
+    }
+    else
+    {
+        temp = (*cur)->lower;
+        while (strcmp(token,temp->name) != 0)
+		{
+			temp = temp->sbling;
+		}
+    }
+    printf("%s\n",temp->contents);
+    return 0;
+}
+int make_file(fptr *cur ,char *token)
+{
+    char input[MAX_CONTENTS];
+    int i;
+    scanf("%s",input);
+    fptr newp = NULL;
+    fptr temp = (*cur)->lower;
+    newp = (fptr)malloc(sizeof(fnode));
+
+    newp->lower = newp->sbling = NULL;
+
+    strcpy(newp->contents,input);
+    strcpy(newp->name,token);
+    strcpy(newp->group,(*cur)->group);
+    strcpy(newp->owner,(*cur)->owner);
+    newp->type = '-';
+    newp->recent_time = make_fd_refresh_time();
+    newp->permission[0] = 'r';
+    newp->permission[1] = 'w';
+    newp->permission[2] = '-';
+    newp->permission[3] = 'r';
+    newp->permission[4] = '-';
+    newp->permission[5] = '-';
+    newp->permission[6] = 'r';
+    newp->permission[7] = '-';
+    newp->permission[8] = '-';
+
+
+    if ((*cur)->lower == NULL)
+	{
+		(*cur) = newp;
+		//printf("*\n");
+	}
+	else
+	{
+		temp = (*cur)->lower;
+		while (temp->sbling != NULL)
+		{
+			temp = temp->sbling;
+		}
+		temp->sbling = newp;
+	}
+
+	return 0;
+}
+
+
 int main()
 {
     fptr cur=NULL;
@@ -1122,6 +1240,7 @@ int main()
         else if(!strcmp(cmd,"su")) su(&cur,&cur_user,remain);
         else if(!strcmp(cmd,"chmod")) chmod(&cur,cur_user,remain);
         else if(!strcmp(cmd,"rm")) rm(&cur,cur_user,remain);
+        else if(!strcmp(cmd,"cat")) cat(&cur,cur_user,remain);
         else printf("Command \'%s\' not found.\n",cmd);
         save_fd("directory.bin");
         user_save_userlist("userlist.bin");
