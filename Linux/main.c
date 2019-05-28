@@ -1108,13 +1108,13 @@ void cat(fptr *cur, uptr *cur_user, char* remain)
 
     while(token)
     {
-        if((strcmp(token,"<") == 0))
+        if((strcmp(token,">") == 0))
         {
             token = strtok(NULL, " ");
             i = search_file(cur,token);
             if(i == 1)
             {
-                printf("이미 있는 파일");
+                printf("이미 있는 파일\n");
                 break;
             }
             else
@@ -1136,15 +1136,11 @@ int search_file(fptr *cur,char *token)
     fptr temp = (*cur)->lower;
     while(temp->sbling != NULL)
     {
+        temp = temp->sbling;
         if(strcmp(temp->name,token) == 0)
         {
             return 1;
-            break;
-        }
-        printf("%s\n",temp->name);
-        printf("%s\n",token);
-
-        temp = temp->sbling;
+         }
     }
     return 0;
 }
@@ -1172,7 +1168,7 @@ int make_file(fptr *cur ,char *token)
 {
     char input[MAX_CONTENTS];
     int i;
-    scanf("%s",input);
+    gets(input);
     fptr newp = NULL;
     fptr temp = (*cur)->lower;
     newp = (fptr)malloc(sizeof(fnode));
