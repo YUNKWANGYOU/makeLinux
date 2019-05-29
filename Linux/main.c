@@ -69,7 +69,7 @@ char current_ver[]="0.1 (Test)", os_name[]="DGU-OS";
 int check_permission(fptr cur,uptr cur_user,char access_permission)
 {
     if(cur_user->uid==0&&cur_user->gid==0) return 1;
-    if(access_permission=='r'){ // 접근하려는 권한이 읽기 권한인 경우(ex:cat(read only), vi(read only)...)
+    if(access_permission=='r'){ // 접근하려는 권한이 읽기 권한인 경우(ex:(read only), vi(read only)...)
         if(!strcmp(cur->owner,cur_user->name)){ // 대상이 유저 소유라면 rwxrwxrwx 중 제일 앞의 3자리를 본다.
             if(cur->permission[0]=='r') return 1;
             else return 0;
@@ -1114,7 +1114,7 @@ void cat(fptr *cur, uptr *cur_user, char* remain)
             i = search_file(cur,token);
             if(i == 1)
             {
-                printf("이미 있는 파일\n");
+                change_contents(cur,token);
                 break;
             }
             else
@@ -1145,6 +1145,24 @@ int search_file(fptr *cur,char *token)
     return 0;
 }
 
+void change_contents(fptr *cur, char *token)
+{
+    char input[MAX_CONTENTS];
+    fptr temp = (*cur)->lower;
+
+    while(temp->sbling != NULL)
+    {
+        temp = temp->sbling;
+        if(strcmp(temp->name,token) == 0)
+        {
+            strcmp(temp->contents,"\0");
+            break;
+        }
+    }
+    gets(input);
+    strcpy(temp->contents,input);
+
+}
 
 int print_file(fptr *cur, char *token)
 {
@@ -1167,7 +1185,6 @@ int print_file(fptr *cur, char *token)
 int make_file(fptr *cur ,char *token)
 {
     char input[MAX_CONTENTS];
-    int i;
     gets(input);
     fptr newp = NULL;
     fptr temp = (*cur)->lower;
