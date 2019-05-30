@@ -509,7 +509,7 @@ void chkdir_p(fptr *cur,uptr cur_user,char path[],int mode)
     }
 }
 
-void mkdir(fptr *cur,uptr cur_user,char *argv[])
+void mkdir(fptr *cur,uptr cur_user,char *argv[]) // -p error,
 {
     int pathnum=0, p=0, m=-1, i, mode=-1;
     char **path_list;
@@ -687,7 +687,7 @@ int check_arg(char *argv[], int max)
     return 0;
 }
 
-int cd(fptr *curr,uptr cur_user,char *argv[])
+int cd(fptr *curr,uptr cur_user,char *argv[]) // x Á¢±Ù
 {
     if(check_arg(argv,1)){
         printf("bash: cd: too many arguments\n");
@@ -908,7 +908,7 @@ uptr user_get_new_user(uptr cur_user,char username[])
     newuser->recent_time=make_fd_refresh_time();
 }
 
-void adduser(uptr cur_user,char remain[])
+void adduser(uptr cur_user,char remain[]) // error
 {
     if(!is_root(cur_user)){
         printf("adduser: Only root may add a user or group to the system.\n");
