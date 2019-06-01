@@ -1148,6 +1148,8 @@ int search_file(fptr *cur,char *token)
 void change_contents(fptr *cur, char *token)
 {
     char input[MAX_CONTENTS];
+    int i = 0;
+    int key = 0;
     fptr temp = (*cur)->lower;
 
     while(temp->sbling != NULL)
@@ -1159,7 +1161,14 @@ void change_contents(fptr *cur, char *token)
             break;
         }
     }
-    fgets(input,sizeof(input),stdin);
+    while(1)
+    {
+        key = getchar();
+        if(key == EOF) break;
+
+        input[i++] = key;
+    }
+    input[i] = 0;
     strcpy(temp->contents,input);
 
 }
@@ -1186,17 +1195,17 @@ int make_file(fptr *cur ,char *token)
 {
     char input[MAX_CONTENTS];
     int i = 0;
+    int key = 0;
 
-    /*while(gets(input) !=EOF)
+    while(1)
     {
-            gets(input);
-            input
-            if(strcmp(input,"0") == 0)
-            {
-                break;
-            }
-    }*/
-    fgets(input,sizeof(input),stdin);
+        key = getchar();
+        if(key == EOF) break;
+
+        input[i++] = key;
+    }
+    input[i] = 0;
+   // fgets(input,sizeof(input),stdin);
     fptr newp = NULL;
     fptr temp = (*cur)->lower;
     newp = (fptr)malloc(sizeof(fnode));
