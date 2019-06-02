@@ -1,0 +1,182 @@
+gcc -o linux linux.c
+linux.c: In function ¡®make_fd¡¯:
+linux.c:362:38: warning: assignment makes integer from pointer without a cast [-Wint-conversion]
+     fd->lower=fd->sbling=NULL; fd->id=fd; fd->hide=false;
+                                      ^
+linux.c: In function ¡®get_permission¡¯:
+linux.c:407:5: warning: implicit declaration of function ¡®itoa¡¯; did you mean ¡®atol¡¯? [-Wimplicit-function-declaration]
+     itoa(mode,mode_s,10);
+     ^~~~
+     atol
+linux.c: In function ¡®fwddir¡¯:
+linux.c:449:36: warning: return makes pointer from integer without a cast [-Wint-conversion]
+         if(lower_dir==NULL) return -1;
+                                    ^
+linux.c: In function ¡®chkdir¡¯:
+linux.c:466:24: warning: comparison between pointer and integer
+         else if(curtemp==-1){
+                        ^~
+linux.c: In function ¡®mkdir¡¯:
+linux.c:519:24: warning: passing argument 1 of ¡®strtok¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+     char *token=strtok(argv," ");
+                        ^~~~
+In file included from linux.c:3:0:
+/usr/include/string.h:335:14: note: expected ¡®char * restrict¡¯ but argument is of type ¡®char **¡¯
+ extern char *strtok (char *__restrict __s, const char *__restrict __delim)
+              ^~~~~~
+linux.c:570:24: warning: ¡®return¡¯ with a value, in function returning void
+                 return NULL;
+                        ^~~~
+linux.c:515:6: note: declared here
+ void mkdir(fptr *cur,uptr cur_user,char *argv[])
+      ^~~~~
+linux.c: In function ¡®id_reset¡¯:
+linux.c:605:17: warning: assignment makes integer from pointer without a cast [-Wint-conversion]
+         (*t)->id=*t;
+                 ^
+linux.c: In function ¡®dirget_relation¡¯:
+linux.c:614:23: warning: comparison between pointer and integer
+         if((*curr)->id==(*n)->upper&&(*curr)->type=='d'){
+                       ^~
+linux.c: In function ¡®load_mydir¡¯:
+linux.c:657:16: warning: ¡®return¡¯ with a value, in function returning void
+         return NULL;
+                ^~~~
+linux.c:652:6: note: declared here
+ void load_mydir(fptr *curr,char *dir)
+      ^~~~~~~~~~
+linux.c: In function ¡®chdir¡¯:
+linux.c:667:34: warning: passing argument 1 of ¡®strlen¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+     char *s=(char*)malloc(strlen(path));strcpy(s,path);
+                                  ^~~~
+In file included from linux.c:3:0:
+/usr/include/string.h:384:15: note: expected ¡®const char *¡¯ but argument is of type ¡®char **¡¯
+ extern size_t strlen (const char *__s)
+               ^~~~~~
+linux.c:667:50: warning: passing argument 2 of ¡®strcpy¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+     char *s=(char*)malloc(strlen(path));strcpy(s,path);
+                                                  ^~~~
+In file included from linux.c:3:0:
+/usr/include/string.h:121:14: note: expected ¡®const char * restrict¡¯ but argument is of type ¡®char **¡¯
+ extern char *strcpy (char *__restrict __dest, const char *__restrict __src)
+              ^~~~~~
+linux.c:668:17: warning: passing argument 1 of ¡®strncmp¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+     if(!strncmp(path,"/",1)) curtemp=root;
+                 ^~~~
+In file included from linux.c:3:0:
+/usr/include/string.h:139:12: note: expected ¡®const char *¡¯ but argument is of type ¡®char **¡¯
+ extern int strncmp (const char *__s1, const char *__s2, size_t __n)
+            ^~~~~~~
+linux.c: In function ¡®check_arg¡¯:
+linux.c:684:20: warning: passing argument 1 of ¡®strtok¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+     char *t=strtok(argv," ");
+                    ^~~~
+In file included from linux.c:3:0:
+/usr/include/string.h:335:14: note: expected ¡®char * restrict¡¯ but argument is of type ¡®char **¡¯
+ extern char *strtok (char *__restrict __s, const char *__restrict __delim)
+              ^~~~~~
+linux.c: In function ¡®user_load_userlist¡¯:
+linux.c:831:29: warning: passing argument 3 of ¡®chdir¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+         chdir(&curtemp,newp,newp->home_path,NULL);
+                             ^~~~
+linux.c:664:6: note: expected ¡®char **¡¯ but argument is of type ¡®char *¡¯
+ fptr chdir(fptr *curr,uptr cur_user,char *path[],char mode[])
+      ^~~~~
+linux.c: In function ¡®user_get_password¡¯:
+linux.c:857:9: warning: implicit declaration of function ¡®gets¡¯; did you mean ¡®fgets¡¯? [-Wimplicit-function-declaration]
+         gets((*newuser)->passwd);
+         ^~~~
+         fgets
+linux.c:865:21: warning: format ¡®%c¡¯ expects argument of type ¡®char *¡¯, but argument 2 has type ¡®int¡¯ [-Wformat=]
+             scanf("%c",yesorno);
+                    ~^
+linux.c: In function ¡®user_get_new_user¡¯:
+linux.c:905:25: warning: passing argument 3 of ¡®mkdir¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+     mkdir(&root,newuser,home_dir);
+                         ^~~~~~~~
+linux.c:515:6: note: expected ¡®char **¡¯ but argument is of type ¡®char *¡¯
+ void mkdir(fptr *cur,uptr cur_user,char *argv[])
+      ^~~~~
+linux.c:908:25: warning: passing argument 3 of ¡®cd¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+     cd(&curtemp,newuser,newuser->home_path); // get home_path pointer address at curtemp
+                         ^~~~~~~
+linux.c:693:5: note: expected ¡®char **¡¯ but argument is of type ¡®char *¡¯
+ int cd(fptr *curr,uptr cur_user,char *argv[])
+     ^~
+linux.c: In function ¡®welcome_linux¡¯:
+linux.c:953:23: warning: passing argument 3 of ¡®cd¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+     cd(cur,login_user,login_user->home_path);
+                       ^~~~~~~~~~
+linux.c:693:5: note: expected ¡®char **¡¯ but argument is of type ¡®char *¡¯
+ int cd(fptr *curr,uptr cur_user,char *argv[])
+     ^~
+linux.c: In function ¡®rm¡¯:
+linux.c:1081:45: warning: passing argument 2 of ¡®check_permission¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+       if( (state = check_permission(delNode,cur_user,'w')) == 0 )
+                                             ^~~~~~~~
+linux.c:69:5: note: expected ¡®uptr {aka struct user *}¡¯ but argument is of type ¡®struct user **¡¯
+ int check_permission(fptr cur,uptr cur_user,char access_permission)
+     ^~~~~~~~~~~~~~~~
+linux.c: In function ¡®cat¡¯:
+linux.c:1114:17: warning: implicit declaration of function ¡®search_file¡¯ [-Wimplicit-function-declaration]
+             i = search_file(cur,token);
+                 ^~~~~~~~~~~
+linux.c:1117:17: warning: implicit declaration of function ¡®change_contents¡¯; did you mean ¡®change_directory¡¯? [-Wimplicit-function-declaration]
+                 change_contents(cur,token);
+                 ^~~~~~~~~~~~~~~
+                 change_directory
+linux.c:1122:17: warning: implicit declaration of function ¡®make_file¡¯; did you mean ¡®make_fd¡¯? [-Wimplicit-function-declaration]
+                 make_file(cur ,token);
+                 ^~~~~~~~~
+                 make_fd
+linux.c:1128:13: warning: implicit declaration of function ¡®print_file¡¯; did you mean ¡®printf¡¯? [-Wimplicit-function-declaration]
+             print_file(cur,token);
+             ^~~~~~~~~~
+             printf
+linux.c: At top level:
+linux.c:1148:6: warning: conflicting types for ¡®change_contents¡¯
+ void change_contents(fptr *cur, char *token)
+      ^~~~~~~~~~~~~~~
+linux.c:1117:17: note: previous implicit declaration of ¡®change_contents¡¯ was here
+                 change_contents(cur,token);
+                 ^~~~~~~~~~~~~~~
+linux.c: In function ¡®main¡¯:
+linux.c:1268:48: warning: passing argument 3 of ¡®cd¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+         if(!strcmp(cmd,"cd")) cd(&cur,cur_user,&remain);
+                                                ^
+linux.c:693:5: note: expected ¡®char **¡¯ but argument is of type ¡®char (*)[192]¡¯
+ int cd(fptr *curr,uptr cur_user,char *argv[])
+     ^~
+linux.c:1269:59: warning: passing argument 3 of ¡®mkdir¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+         else if(!strcmp(cmd,"mkdir")) mkdir(&cur,cur_user,&remain);
+                                                           ^
+linux.c:515:6: note: expected ¡®char **¡¯ but argument is of type ¡®char (*)[192]¡¯
+ void mkdir(fptr *cur,uptr cur_user,char *argv[])
+      ^~~~~
+linux.c:1270:52: warning: passing argument 3 of ¡®ls¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+         else if(!strcmp(cmd,"ls")) ls(cur,cur_user,&remain);
+                                                    ^
+linux.c:273:6: note: expected ¡®char *¡¯ but argument is of type ¡®char (*)[192]¡¯
+ void ls(fptr cur,uptr cur_user,char argv[])
+      ^~
+linux.c:1275:44: warning: passing argument 2 of ¡®rm¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+         else if(!strcmp(cmd,"rm")) rm(&cur,cur_user,remain);
+                                            ^~~~~~~~
+linux.c:1036:5: note: expected ¡®struct user **¡¯ but argument is of type ¡®uptr {aka struct user *}¡¯
+ int rm(fptr *cur,uptr *cur_user,char* remain)
+     ^~
+linux.c:1276:46: warning: passing argument 2 of ¡®cat¡¯ from incompatible pointer type [-Wincompatible-pointer-types]
+         else if(!strcmp(cmd,"cat")) cat(&cur,cur_user,remain);
+                                              ^~~~~~~~
+linux.c:1103:6: note: expected ¡®struct user **¡¯ but argument is of type ¡®uptr {aka struct user *}¡¯
+ void cat(fptr *cur, uptr *cur_user, char* remain)
+      ^~~
+linux.c: In function ¡®mkdir¡¯:
+linux.c:550:17: warning: ignoring return value of ¡®realloc¡¯, declared with attribute warn_unused_result [-Wunused-result]
+                 realloc(path_list,sizeof(char*)*pathnum);
+                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/tmp/ccGsleOO.o: In function `user_get_password':
+linux.c:(.text+0x2849): warning: the `gets' function is dangerous and should not be used.
+/tmp/ccGsleOO.o: In function `get_permission':
+linux.c:(.text+0x120e): undefined reference to `itoa'
+collect2: error: ld returned 1 exit status
